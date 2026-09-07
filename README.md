@@ -42,6 +42,6 @@ The `Four-site Playwright test` workflow is manually runnable with `workflow_dis
 - `DOCKERHUB_USERNAME`
 - `DOCKERHUB_TOKEN`
 
-The workflow builds the image, runs the test on the runner, uploads each screenshot as an individual Actions artifact (`site-1-screenshot` through `site-4-screenshot`), uploads the network/header data separately, adds the redacted headers to the job summary, and pushes both the commit tag and `latest` to `docker.io/<DOCKERHUB_USERNAME>/four-site-browser-screenshot`.
+The workflow pulls the published public image `docker.io/darkedges/four-site-browser-screenshot:latest`, runs the test on the ARC runner, uploads each screenshot as an individual Actions artifact (`site-1-screenshot` through `site-4-screenshot`), uploads the network/header data separately, and adds the redacted headers to the job summary. Docker Hub credentials are not required for this workflow.
 
 For a visible run, use `npm run test:headed` after setting `SITE_URLS`. The test launches four separate Chromium processes so each site appears in its own browser window.
