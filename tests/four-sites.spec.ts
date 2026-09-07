@@ -138,16 +138,18 @@ test('opens four browser windows and captures a screenshot for each site', async
       });
     }
 
-    await fs.writeFile(
-      path.join(screenshotDirectory, 'network-addresses.json'),
-      JSON.stringify(networkAddresses, null, 2),
-      'utf8',
-    );
-    await fs.writeFile(
-      path.join(screenshotDirectory, 'request-response-headers.json'),
-      JSON.stringify(requestResponses, null, 2),
-      'utf8',
-    );
+    for (let index = 0; index < networkAddresses.length; index += 1) {
+      await fs.writeFile(
+        path.join(screenshotDirectory, `site-${index + 1}-network-address.json`),
+        JSON.stringify(networkAddresses[index], null, 2),
+        'utf8',
+      );
+      await fs.writeFile(
+        path.join(screenshotDirectory, `site-${index + 1}-request-response-headers.json`),
+        JSON.stringify(requestResponses[index], null, 2),
+        'utf8',
+      );
+    }
   } finally {
     await Promise.all(browsers.map((browser) => browser.close()));
   }

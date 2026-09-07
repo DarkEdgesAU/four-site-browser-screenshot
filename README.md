@@ -1,6 +1,6 @@
 # Four-site browser screenshot test
 
-This project opens four visible Chromium browser windows with DevTools open, navigates each one to a different URL, waits for the page to settle, and saves one full-page screenshot per site under `test-results/site-screenshots/`. It also records the main document HTTP status, server IP, and port in `network-addresses.json` and prints them in the test output.
+This project opens four visible Chromium browser windows with DevTools open, navigates each one to a different URL, waits for the page to settle, and saves one full-page screenshot per site under `test-results/site-screenshots/`. It also records each site's main document HTTP status, server IP, port, and redacted request/response headers in per-site JSON files.
 
 The default sites are:
 
@@ -33,7 +33,7 @@ docker run --rm `
   darkedges/four-site-browser-screenshot:latest
 ```
 
-The container runs Chromium headlessly and writes screenshots, `network-addresses.json`, and `request-response-headers.json` to `test-results/site-screenshots/`. Each site uses a new browser process and context with service workers, HTTP cache, cookies, and browser-level DNS cache disabled or cleared; requests also carry `Cache-Control: no-cache, no-store`. Request and response headers are uploaded with sensitive values redacted.
+The container runs Chromium headlessly and writes screenshots plus `site-<n>-network-address.json` and `site-<n>-request-response-headers.json` files to `test-results/site-screenshots/`. Each site uses a new browser process and context with service workers, HTTP cache, cookies, and browser-level DNS cache disabled or cleared; requests also carry `Cache-Control: no-cache, no-store`. Request and response headers are uploaded with sensitive values redacted.
 
 ## GitHub Actions
 

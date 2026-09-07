@@ -68,19 +68,67 @@ jobs:
           if-no-files-found: warn
           archive: false
 
-      - name: Upload network addresses
+      - name: Upload site 1 network address
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          path: test-results/site-screenshots/network-addresses.json
+          path: test-results/site-screenshots/site-1-network-address.json
           if-no-files-found: warn
           archive: false
 
-      - name: Upload request and response headers
+      - name: Upload site 1 request and response headers
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          path: test-results/site-screenshots/request-response-headers.json
+          path: test-results/site-screenshots/site-1-request-response-headers.json
+          if-no-files-found: warn
+          archive: false
+
+      - name: Upload site 2 network address
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          path: test-results/site-screenshots/site-2-network-address.json
+          if-no-files-found: warn
+          archive: false
+
+      - name: Upload site 2 request and response headers
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          path: test-results/site-screenshots/site-2-request-response-headers.json
+          if-no-files-found: warn
+          archive: false
+
+      - name: Upload site 3 network address
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          path: test-results/site-screenshots/site-3-network-address.json
+          if-no-files-found: warn
+          archive: false
+
+      - name: Upload site 3 request and response headers
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          path: test-results/site-screenshots/site-3-request-response-headers.json
+          if-no-files-found: warn
+          archive: false
+
+      - name: Upload site 4 network address
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          path: test-results/site-screenshots/site-4-network-address.json
+          if-no-files-found: warn
+          archive: false
+
+      - name: Upload site 4 request and response headers
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          path: test-results/site-screenshots/site-4-request-response-headers.json
           if-no-files-found: warn
           archive: false
 
@@ -121,15 +169,29 @@ jobs:
             echo '</tr></table>'
           } >> "$GITHUB_STEP_SUMMARY"
 
-          headers_file="test-results/site-screenshots/request-response-headers.json"
-          if [ -f "$headers_file" ]; then
-            {
-              echo '## Request and response headers'
-              echo
-              echo 'Sensitive headers are redacted.'
-              echo
-              echo '```json'
-              cat "$headers_file"
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+          echo '## Per-site network data' >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          for site_number in 1 2 3 4; do
+            network_file="test-results/site-screenshots/site-${site_number}-network-address.json"
+            headers_file="test-results/site-screenshots/site-${site_number}-request-response-headers.json"
+            if [ -f "$network_file" ] || [ -f "$headers_file" ]; then
+              {
+                echo "### Site ${site_number}"
+                echo
+                if [ -f "$network_file" ]; then
+                  echo '```json'
+                  cat "$network_file"
+                  echo '```'
+                fi
+                if [ -f "$headers_file" ]; then
+                  echo
+                  echo 'Sensitive headers are redacted.'
+                  echo
+                  echo '```json'
+                  cat "$headers_file"
+                  echo '```'
+                fi
+                echo
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
