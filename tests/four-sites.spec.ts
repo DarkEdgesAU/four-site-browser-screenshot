@@ -4,8 +4,8 @@ import fs from 'node:fs/promises';
 
 const defaultSites = [
   'https://signon.sso.cba/identity/.well-known/openid-configuration',
-  'https://signon.sso.cba/pa/heartbeat.pf',
-  'https://proxy.sso.cba/pa/heartbeat.pf',
+  'https://signon.sso.cba/pa/heartbeat.ping',
+  'https://proxy.sso.cba/pa/heartbeat.ping',
   'https://radar.cloudflare.com/ip',
 ];
 

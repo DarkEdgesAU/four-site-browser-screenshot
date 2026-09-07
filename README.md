@@ -5,8 +5,8 @@ This project opens four visible Chromium browser windows with DevTools open, nav
 The default sites are:
 
 1. `https://signon.sso.cba/identity/.well-known/openid-configuration`
-2. `https://signon.sso.cba/pa/heartbeat.pf`
-3. `https://proxy.sso.cba/pa/heartbeat.pf`
+2. `https://signon.sso.cba/pa/heartbeat.ping`
+3. `https://proxy.sso.cba/pa/heartbeat.ping`
 4. `https://radar.cloudflare.com/ip`
 
 Run the test with the defaults:
@@ -28,7 +28,7 @@ The Docker image is based on the official Playwright image and includes Chromium
 ```powershell
 docker build -t darkedges/four-site-browser-screenshot:latest .
 docker run --rm `
-  -e SITE_URLS='https://signon.sso.cba/identity/.well-known/openid-configuration,https://signon.sso.cba/pa/heartbeat.pf,https://proxy.sso.cba/pa/heartbeat.pf,https://radar.cloudflare.com/ip' `
+  -e SITE_URLS='https://signon.sso.cba/identity/.well-known/openid-configuration,https://signon.sso.cba/pa/heartbeat.ping,https://proxy.sso.cba/pa/heartbeat.ping,https://radar.cloudflare.com/ip' `
   -v "${PWD}/artifacts:/app/test-results" `
   darkedges/four-site-browser-screenshot:latest
 ```
