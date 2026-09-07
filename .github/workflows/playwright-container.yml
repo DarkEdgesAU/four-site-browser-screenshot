@@ -34,12 +34,52 @@ jobs:
             --volume "$GITHUB_WORKSPACE/artifacts:/app/test-results" \
             "$IMAGE_NAME:${GITHUB_SHA}"
 
-      - name: Upload screenshots and network data
+      - name: Upload site 1 screenshot
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: four-site-playwright-results
-          path: artifacts/
+          name: site-1-screenshot
+          path: artifacts/site-screenshots/site-1.png
+          if-no-files-found: warn
+
+      - name: Upload site 2 screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-2-screenshot
+          path: artifacts/site-screenshots/site-2.png
+          if-no-files-found: warn
+
+      - name: Upload site 3 screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-3-screenshot
+          path: artifacts/site-screenshots/site-3.png
+          if-no-files-found: warn
+
+      - name: Upload site 4 screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-4-screenshot
+          path: artifacts/site-screenshots/site-4.png
+          if-no-files-found: warn
+
+      - name: Upload network addresses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: network-addresses
+          path: artifacts/site-screenshots/network-addresses.json
+          if-no-files-found: warn
+
+      - name: Upload request and response headers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: request-response-headers
+          path: artifacts/site-screenshots/request-response-headers.json
           if-no-files-found: warn
 
       - name: Add request and response headers to job summary
