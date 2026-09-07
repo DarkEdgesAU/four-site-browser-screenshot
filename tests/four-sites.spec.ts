@@ -28,6 +28,7 @@ function getSites(): string[] {
 
 test('opens four browser windows and captures a screenshot for each site', async () => {
   const sites = getSites();
+  const headless = process.env.HEADLESS === 'true';
   const screenshotDirectory = path.resolve('test-results', 'site-screenshots');
   await fs.mkdir(screenshotDirectory, { recursive: true });
 
@@ -42,7 +43,7 @@ test('opens four browser windows and captures a screenshot for each site', async
 
   try {
     for (const site of sites) {
-      const browser = await chromium.launch({ headless: false, devtools: true });
+      const browser = await chromium.launch({ headless, devtools: !headless });
       const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       browsers.push(browser);
       pages.push(page);
