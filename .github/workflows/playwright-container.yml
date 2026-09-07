@@ -220,16 +220,20 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: Add screenshot gallery to job summary
-        shell: bash
+        uses: actions/github-script@v7
         env:
           PAGES_URL: ${{ steps.deployment.outputs.page_url }}
-        run: |
-          pages_base_url="${PAGES_URL%/}"
-          {
-            echo '## Screenshots'
-            echo
-            echo "### Site 1"; echo; echo "![Site 1 screenshot](${pages_base_url}/site-1.jpg)"; echo
-            echo "### Site 2"; echo; echo "![Site 2 screenshot](${pages_base_url}/site-2.jpg)"; echo
-            echo "### Site 3"; echo; echo "![Site 3 screenshot](${pages_base_url}/site-3.jpg)"; echo
-            echo "### Site 4"; echo; echo "![Site 4 screenshot](${pages_base_url}/site-4.jpg)"; echo
-          } >> "$GITHUB_STEP_SUMMARY"
+        with:
+          script: |
+            const pagesBaseUrl = process.env.PAGES_URL.replace(/\/$/, '')
+            await core.summary
+              .addHeading('Screenshots', 2)
+              .addHeading('Site 1', 3)
+              .addImage(`${pagesBaseUrl}/site-1.jpg`, 'Site 1 screenshot', { width: '480' })
+              .addHeading('Site 2', 3)
+              .addImage(`${pagesBaseUrl}/site-2.jpg`, 'Site 2 screenshot', { width: '480' })
+              .addHeading('Site 3', 3)
+              .addImage(`${pagesBaseUrl}/site-3.jpg`, 'Site 3 screenshot', { width: '480' })
+              .addHeading('Site 4', 3)
+              .addImage(`${pagesBaseUrl}/site-4.jpg`, 'Site 4 screenshot', { width: '480' })
+              .write()
