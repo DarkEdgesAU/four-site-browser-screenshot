@@ -9,6 +9,7 @@ on:
         default: 'https://signon.sso.cba/identity/.well-known/openid-configuration,https://signon.sso.cba/pa/heartbeat.pf,https://proxy.sso.cba/pa/heartbeat.pf,https://radar.cloudflare.com/ip'
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -33,56 +34,93 @@ jobs:
 
       - name: Upload site 1 screenshot
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
+        id: upload_site_1
         with:
-          name: site-1-screenshot
-          path: test-results/site-screenshots/site-1.png
+          path: test-results/site-screenshots/site-1.jpg
           if-no-files-found: warn
+          archive: false
 
       - name: Upload site 2 screenshot
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
+        id: upload_site_2
         with:
-          name: site-2-screenshot
-          path: test-results/site-screenshots/site-2.png
+          path: test-results/site-screenshots/site-2.jpg
           if-no-files-found: warn
+          archive: false
 
       - name: Upload site 3 screenshot
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
+        id: upload_site_3
         with:
-          name: site-3-screenshot
-          path: test-results/site-screenshots/site-3.png
+          path: test-results/site-screenshots/site-3.jpg
           if-no-files-found: warn
+          archive: false
 
       - name: Upload site 4 screenshot
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
+        id: upload_site_4
         with:
-          name: site-4-screenshot
-          path: test-results/site-screenshots/site-4.png
+          path: test-results/site-screenshots/site-4.jpg
           if-no-files-found: warn
+          archive: false
 
       - name: Upload network addresses
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: network-addresses
           path: test-results/site-screenshots/network-addresses.json
           if-no-files-found: warn
+          archive: false
 
       - name: Upload request and response headers
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: request-response-headers
           path: test-results/site-screenshots/request-response-headers.json
           if-no-files-found: warn
+          archive: false
 
-      - name: Add request and response headers to job summary
+      - name: Add screenshot gallery and headers to job summary
         if: always()
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SITE_1_ID: ${{ steps.upload_site_1.outputs.artifact-id }}
+          SITE_2_ID: ${{ steps.upload_site_2.outputs.artifact-id }}
+          SITE_3_ID: ${{ steps.upload_site_3.outputs.artifact-id }}
+          SITE_4_ID: ${{ steps.upload_site_4.outputs.artifact-id }}
         run: |
+          resolve_blob_url() {
+            artifact_id="$1"
+            if [ -z "$artifact_id" ]; then
+              return 0
+            fi
+            curl --fail --silent --show-error --location \
+              --output /dev/null --write-out '%{url_effective}' \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip"
+          }
+
+          site_1_url="$(resolve_blob_url "$SITE_1_ID")"
+          site_2_url="$(resolve_blob_url "$SITE_2_ID")"
+          site_3_url="$(resolve_blob_url "$SITE_3_ID")"
+          site_4_url="$(resolve_blob_url "$SITE_4_ID")"
+
+          {
+            echo '## Screenshots'
+            echo
+            echo '<table><tr>'
+            if [ -n "$site_1_url" ]; then echo "<td><a href=\"$site_1_url\"><img src=\"$site_1_url\" width=\"480\" alt=\"Site 1 screenshot\"></a><br><sub>Site 1</sub></td>"; fi
+            if [ -n "$site_2_url" ]; then echo "<td><a href=\"$site_2_url\"><img src=\"$site_2_url\" width=\"480\" alt=\"Site 2 screenshot\"></a><br><sub>Site 2</sub></td>"; fi
+            if [ -n "$site_3_url" ]; then echo "<td><a href=\"$site_3_url\"><img src=\"$site_3_url\" width=\"480\" alt=\"Site 3 screenshot\"></a><br><sub>Site 3</sub></td>"; fi
+            if [ -n "$site_4_url" ]; then echo "<td><a href=\"$site_4_url\"><img src=\"$site_4_url\" width=\"480\" alt=\"Site 4 screenshot\"></a><br><sub>Site 4</sub></td>"; fi
+            echo '</tr></table>'
+          } >> "$GITHUB_STEP_SUMMARY"
+
           headers_file="test-results/site-screenshots/request-response-headers.json"
           if [ -f "$headers_file" ]; then
             {

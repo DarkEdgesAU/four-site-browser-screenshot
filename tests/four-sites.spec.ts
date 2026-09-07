@@ -131,7 +131,9 @@ test('opens four browser windows and captures a screenshot for each site', async
 
     for (let index = 0; index < pages.length; index += 1) {
       await pages[index].screenshot({
-        path: path.join(screenshotDirectory, `site-${index + 1}.png`),
+        path: path.join(screenshotDirectory, `site-${index + 1}.jpg`),
+        type: 'jpeg',
+        quality: 70,
         fullPage: true,
       });
     }
