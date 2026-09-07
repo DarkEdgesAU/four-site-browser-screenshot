@@ -63,6 +63,29 @@ test('opens four browser windows and captures a screenshot for each site', async
         `${site} [HTTP ${networkAddress.httpStatus ?? 'unknown'}] -> ` +
           `${networkAddress.ipAddress ?? 'IP unavailable'}:${networkAddress.port ?? ''}`,
       );
+
+      await page.evaluate(
+        ({ ipAddress, port, httpStatus }) => {
+          const overlay = document.createElement('div');
+          overlay.textContent =
+            `Request IP: ${ipAddress ?? 'unavailable'}:${port ?? ''} | ` +
+            `HTTP ${httpStatus ?? 'unknown'}`;
+          overlay.style.cssText = [
+            'position: fixed',
+            'top: 12px',
+            'right: 12px',
+            'z-index: 2147483647',
+            'padding: 10px 14px',
+            'border-radius: 6px',
+            'background: #111827',
+            'color: #f9fafb',
+            'font: 600 14px/1.2 Arial, sans-serif',
+            'box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35)',
+          ].join(';');
+          document.documentElement.appendChild(overlay);
+        },
+        networkAddress,
+      );
     }
 
     for (let index = 0; index < pages.length; index += 1) {
