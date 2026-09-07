@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   test-and-publish:
-    runs-on: [self-hosted, linux, x64]
+    runs-on: four-site-runner-set
     env:
       IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/four-site-browser-screenshot
       SITE_URLS: ${{ inputs.site_urls }}

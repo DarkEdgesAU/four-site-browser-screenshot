@@ -37,7 +37,7 @@ The container runs Chromium headlessly and writes screenshots, `network-addresse
 
 ## GitHub Actions
 
-The `Four-site Playwright test` workflow is manually runnable with `workflow_dispatch` on a self-hosted Linux x64 runner. Add these repository secrets before running it:
+The `Four-site Playwright test` workflow is manually runnable with `workflow_dispatch` on the dedicated ARC scale set labeled `four-site-runner-set`. Add these repository secrets before running it:
 
 - `DOCKERHUB_USERNAME`
 - `DOCKERHUB_TOKEN`
