@@ -42,6 +42,23 @@ jobs:
           path: artifacts/
           if-no-files-found: warn
 
+      - name: Add request and response headers to job summary
+        if: always()
+        shell: bash
+        run: |
+          headers_file="artifacts/site-screenshots/request-response-headers.json"
+          if [ -f "$headers_file" ]; then
+            {
+              echo '## Request and response headers'
+              echo
+              echo 'Sensitive headers are redacted.'
+              echo
+              echo '```json'
+              cat "$headers_file"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:

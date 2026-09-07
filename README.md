@@ -33,7 +33,7 @@ docker run --rm `
   darkedges/four-site-browser-screenshot:latest
 ```
 
-The container runs Chromium headlessly and writes screenshots plus `network-addresses.json` to `test-results/site-screenshots/`. Each site uses a new browser process and context with service workers, HTTP cache, cookies, and browser-level DNS cache disabled or cleared; requests also carry `Cache-Control: no-cache, no-store`.
+The container runs Chromium headlessly and writes screenshots, `network-addresses.json`, and `request-response-headers.json` to `test-results/site-screenshots/`. Each site uses a new browser process and context with service workers, HTTP cache, cookies, and browser-level DNS cache disabled or cleared; requests also carry `Cache-Control: no-cache, no-store`. Request and response headers are uploaded with sensitive values redacted.
 
 ## GitHub Actions
 
@@ -42,6 +42,6 @@ The `Four-site Playwright test` workflow is manually runnable with `workflow_dis
 - `DOCKERHUB_USERNAME`
 - `DOCKERHUB_TOKEN`
 
-The workflow builds the image, runs the test on the runner, uploads the screenshots as an Actions artifact, and pushes both the commit tag and `latest` to `docker.io/<DOCKERHUB_USERNAME>/four-site-browser-screenshot`.
+The workflow builds the image, runs the test on the runner, uploads the screenshots and network/header data as an Actions artifact, adds the redacted headers to the job summary, and pushes both the commit tag and `latest` to `docker.io/<DOCKERHUB_USERNAME>/four-site-browser-screenshot`.
 
 For a visible run, use `npm run test:headed` after setting `SITE_URLS`. The test launches four separate Chromium processes so each site appears in its own browser window.

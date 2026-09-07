@@ -9,6 +9,16 @@ const defaultSites = [
   'https://radar.cloudflare.com/ip',
 ];
 
+function redactHeaders(headers: Record<string, string> | undefined): Record<string, string> {
+  const sensitiveHeader = /authorization|cookie|set-cookie|proxy-authorization|api[-_]key/i;
+  return Object.fromEntries(
+    Object.entries(headers ?? {}).map(([name, value]) => [
+      name,
+      sensitiveHeader.test(name) ? '[REDACTED]' : value,
+    ]),
+  );
+}
+
 function getSites(): string[] {
   const configured = process.env.SITE_URLS
     ?.split(',')
@@ -40,6 +50,14 @@ test('opens four browser windows and captures a screenshot for each site', async
     ipAddress: string | null;
     port: number | null;
   }> = [];
+  const requestResponses: Array<{
+    site: string;
+    httpStatus: number | null;
+    ipAddress: string | null;
+    port: number | null;
+    requestHeaders: Record<string, string>;
+    responseHeaders: Record<string, string>;
+  }> = [];
 
   try {
     for (const site of sites) {
@@ -69,6 +87,7 @@ test('opens four browser windows and captures a screenshot for each site', async
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined);
       await page.waitForTimeout(1_000);
       const serverAddress = await response?.serverAddr();
+      const request = response?.request();
       const networkAddress = {
         site,
         httpStatus: response?.status() ?? null,
@@ -103,6 +122,11 @@ test('opens four browser windows and captures a screenshot for each site', async
         },
         networkAddress,
       );
+      requestResponses.push({
+        ...networkAddress,
+        requestHeaders: redactHeaders(await request?.allHeaders()),
+        responseHeaders: redactHeaders(await response?.allHeaders()),
+      });
     }
 
     for (let index = 0; index < pages.length; index += 1) {
@@ -115,6 +139,11 @@ test('opens four browser windows and captures a screenshot for each site', async
     await fs.writeFile(
       path.join(screenshotDirectory, 'network-addresses.json'),
       JSON.stringify(networkAddresses, null, 2),
+      'utf8',
+    );
+    await fs.writeFile(
+      path.join(screenshotDirectory, 'request-response-headers.json'),
+      JSON.stringify(requestResponses, null, 2),
       'utf8',
     );
   } finally {
