@@ -161,12 +161,10 @@ jobs:
           {
             echo '## Screenshots'
             echo
-            echo '<table><tr>'
-            if [ -n "$site_1_url" ]; then echo "<td><a href=\"$site_1_url\"><img src=\"$site_1_url\" width=\"480\" alt=\"Site 1 screenshot\"></a><br><sub>Site 1</sub></td>"; fi
-            if [ -n "$site_2_url" ]; then echo "<td><a href=\"$site_2_url\"><img src=\"$site_2_url\" width=\"480\" alt=\"Site 2 screenshot\"></a><br><sub>Site 2</sub></td>"; fi
-            if [ -n "$site_3_url" ]; then echo "<td><a href=\"$site_3_url\"><img src=\"$site_3_url\" width=\"480\" alt=\"Site 3 screenshot\"></a><br><sub>Site 3</sub></td>"; fi
-            if [ -n "$site_4_url" ]; then echo "<td><a href=\"$site_4_url\"><img src=\"$site_4_url\" width=\"480\" alt=\"Site 4 screenshot\"></a><br><sub>Site 4</sub></td>"; fi
-            echo '</tr></table>'
+            if [ -n "$site_1_url" ]; then echo "### Site 1"; echo; echo "![Site 1 screenshot]($site_1_url)"; echo; fi
+            if [ -n "$site_2_url" ]; then echo "### Site 2"; echo; echo "![Site 2 screenshot]($site_2_url)"; echo; fi
+            if [ -n "$site_3_url" ]; then echo "### Site 3"; echo; echo "![Site 3 screenshot]($site_3_url)"; echo; fi
+            if [ -n "$site_4_url" ]; then echo "### Site 4"; echo; echo "![Site 4 screenshot]($site_4_url)"; echo; fi
           } >> "$GITHUB_STEP_SUMMARY"
 
           echo '## Per-site network data' >> "$GITHUB_STEP_SUMMARY"
