@@ -43,8 +43,25 @@ test('opens four browser windows and captures a screenshot for each site', async
 
   try {
     for (const site of sites) {
-      const browser = await chromium.launch({ headless, devtools: !headless });
-      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      const browser = await chromium.launch({
+        headless,
+        devtools: !headless,
+        args: [
+          '--disable-http-cache',
+          '--disable-dns-cache',
+          '--disk-cache-size=0',
+          '--media-cache-size=0',
+        ],
+      });
+      const context = await browser.newContext({ serviceWorkers: 'block' });
+      await context.setExtraHTTPHeaders({
+        'cache-control': 'no-cache, no-store',
+        pragma: 'no-cache',
+      });
+      const page = await context.newPage({ viewport: { width: 1440, height: 900 } });
+      const cdp = await context.newCDPSession(page);
+      await cdp.send('Network.clearBrowserCache').catch(() => undefined);
+      await cdp.send('Network.clearBrowserCookies').catch(() => undefined);
       browsers.push(browser);
       pages.push(page);
 

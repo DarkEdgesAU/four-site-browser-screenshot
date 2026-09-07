@@ -33,7 +33,7 @@ docker run --rm `
   darkedges/four-site-browser-screenshot:latest
 ```
 
-The container runs Chromium headlessly and writes screenshots plus `network-addresses.json` to `test-results/site-screenshots/`.
+The container runs Chromium headlessly and writes screenshots plus `network-addresses.json` to `test-results/site-screenshots/`. Each site uses a new browser process and context with service workers, HTTP cache, cookies, and browser-level DNS cache disabled or cleared; requests also carry `Cache-Control: no-cache, no-store`.
 
 ## GitHub Actions
 
