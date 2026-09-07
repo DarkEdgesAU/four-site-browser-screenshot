@@ -14,33 +14,26 @@ permissions:
 jobs:
   test-on-arc:
     runs-on: four-site-runner-set
-    env:
-      IMAGE_NAME: docker.io/darkedges/four-site-browser-screenshot
-      IMAGE_TAG: latest
-      SITE_URLS: ${{ inputs.site_urls }}
+    container:
+      image: docker.io/darkedges/four-site-browser-screenshot:latest
+      env:
+        SITE_URLS: ${{ inputs.site_urls }}
+        HEADLESS: 'true'
+      options: --ipc=host
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Pull published test container
-        run: docker pull "$IMAGE_NAME:$IMAGE_TAG"
-
-      - name: Run Playwright test in container
-        run: |
-          mkdir -p "$GITHUB_WORKSPACE/artifacts"
-          docker run --rm \
-            --env SITE_URLS \
-            --env HEADLESS=true \
-            --volume "$GITHUB_WORKSPACE/artifacts:/app/test-results" \
-            "$IMAGE_NAME:$IMAGE_TAG"
+      - name: Run Playwright test
+        run: npm test -- --workers=1
 
       - name: Upload site 1 screenshot
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: site-1-screenshot
-          path: artifacts/site-screenshots/site-1.png
+          path: test-results/site-screenshots/site-1.png
           if-no-files-found: warn
 
       - name: Upload site 2 screenshot
@@ -48,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: site-2-screenshot
-          path: artifacts/site-screenshots/site-2.png
+          path: test-results/site-screenshots/site-2.png
           if-no-files-found: warn
 
       - name: Upload site 3 screenshot
@@ -56,7 +49,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: site-3-screenshot
-          path: artifacts/site-screenshots/site-3.png
+          path: test-results/site-screenshots/site-3.png
           if-no-files-found: warn
 
       - name: Upload site 4 screenshot
@@ -64,7 +57,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: site-4-screenshot
-          path: artifacts/site-screenshots/site-4.png
+          path: test-results/site-screenshots/site-4.png
           if-no-files-found: warn
 
       - name: Upload network addresses
@@ -72,7 +65,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: network-addresses
-          path: artifacts/site-screenshots/network-addresses.json
+          path: test-results/site-screenshots/network-addresses.json
           if-no-files-found: warn
 
       - name: Upload request and response headers
@@ -80,14 +73,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: request-response-headers
-          path: artifacts/site-screenshots/request-response-headers.json
+          path: test-results/site-screenshots/request-response-headers.json
           if-no-files-found: warn
 
       - name: Add request and response headers to job summary
         if: always()
         shell: bash
         run: |
-          headers_file="artifacts/site-screenshots/request-response-headers.json"
+          headers_file="test-results/site-screenshots/request-response-headers.json"
           if [ -f "$headers_file" ]; then
             {
               echo '## Request and response headers'
