@@ -1,6 +1,9 @@
 name: Four-site Playwright test
 
 on:
+  schedule:
+    # Rebuild the gallery daily to remove expired captures, even without new tests.
+    - cron: '17 16 * * *'
   workflow_dispatch:
     inputs:
       site_urls:
@@ -18,9 +21,11 @@ concurrency:
 
 jobs:
   test-on-arc:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: four-site-runner-set
     outputs:
-      pages_ready: ${{ steps.upload_pages.outcome == 'success' }}
+      capture_ready: ${{ steps.upload_capture.outcome == 'success' }}
+      capture_attempt: ${{ github.run_attempt }}
     container:
       image: docker.io/darkedges/four-site-browser-screenshot:latest
       env:
@@ -151,35 +156,15 @@ jobs:
           archive: false
           retention-days: 7
 
-      - name: Prepare latest GitHub Pages images
-        id: prepare_pages
+      - name: Save capture for retained galleries
+        id: upload_capture
         if: ${{ !cancelled() && steps.capture.outcome == 'success' }}
-        run: |
-          mkdir -p pages
-          cp test-results/site-screenshots/site-1.jpg pages/site-1.jpg
-          cp test-results/site-screenshots/site-2.jpg pages/site-2.jpg
-          cp test-results/site-screenshots/site-3.jpg pages/site-3.jpg
-          cp test-results/site-screenshots/site-4.jpg pages/site-4.jpg
-          {
-            echo '<!doctype html>'
-            echo '<html lang="en"><head><meta charset="utf-8"><title>Latest browser screenshots</title></head><body>'
-            echo '<h1>Latest browser screenshots</h1>'
-            echo '<p>Latest published capture. Images are replaced on each deployment; use run artifacts for historical evidence.</p>'
-            printf '<p>Source: <a href="%s/%s/actions/runs/%s">run %s, attempt %s</a></p>\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$GITHUB_RUN_NUMBER" "$GITHUB_RUN_ATTEMPT"
-            echo '<p><img src="site-1.jpg" width="480" alt="Site 1 screenshot"></p>'
-            echo '<p><img src="site-2.jpg" width="480" alt="Site 2 screenshot"></p>'
-            echo '<p><img src="site-3.jpg" width="480" alt="Site 3 screenshot"></p>'
-            echo '<p><img src="site-4.jpg" width="480" alt="Site 4 screenshot"></p>'
-            echo '</body></html>'
-          } > pages/index.html
-
-      - name: Upload GitHub Pages artifact
-        id: upload_pages
-        if: ${{ !cancelled() && steps.prepare_pages.outcome == 'success' }}
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          path: pages
-          retention-days: 1
+          name: gallery-capture-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/site-screenshots/site-*.jpg
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Add per-site headers to job summary
         if: always()
@@ -214,40 +199,58 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-pages:
-    if: ${{ !cancelled() && needs.test-on-arc.outputs.pages_ready == 'true' }}
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || needs.test-on-arc.outputs.capture_ready == 'true') }}
     needs: test-on-arc
     runs-on: ubuntu-latest
     permissions:
       actions: read
+      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy latest screenshots to GitHub Pages
+      - name: Check out gallery builder
+        uses: actions/checkout@v4
+
+      - name: Build galleries from the last seven days of captures
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CAPTURE_ATTEMPT: ${{ needs.test-on-arc.outputs.capture_attempt }}
+        run: python3 scripts/build_gallery.py
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: pages
+          retention-days: 1
+
+      - name: Deploy retained galleries to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Add screenshot gallery to job summary
+      - name: Add direct gallery links to job summary
         uses: actions/github-script@v7
         env:
           PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+          CAPTURE_ATTEMPT: ${{ needs.test-on-arc.outputs.capture_attempt }}
         with:
           script: |
             const pagesBaseUrl = process.env.PAGES_URL.replace(/\/$/, '')
-            const version = `${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`
             core.summary
-              .addHeading('Latest published screenshots', 2)
-              .addRaw('<p>These previews use the latest published images and may change after another run. For images from this specific run, use its individual screenshot artifacts below.</p>')
-              .addLink('Open latest gallery and capture details', `${pagesBaseUrl}/`)
+              .addHeading('Screenshot galleries', 2)
+              .addRaw('<p>Direct GitHub Pages links: images load on the gallery page without GitHub’s Camo image proxy. Captures are retained for seven days; cleanup runs daily and after each new capture.</p>')
+              .addLink('Browse retained runs', `${pagesBaseUrl}/`)
               .addBreak()
-            for (let site = 1; site <= 4; site++) {
-              const imageUrl = `${pagesBaseUrl}/site-${site}.jpg?capture=${version}`
+            if (context.eventName === 'workflow_dispatch') {
+              const runUrl = `${pagesBaseUrl}/runs/${process.env.GITHUB_RUN_ID}/attempt-${process.env.CAPTURE_ATTEMPT}/`
               core.summary
-                .addHeading(`Site ${site}`, 3)
-                .addImage(imageUrl, `Site ${site} screenshot`, { width: '480' })
+                .addHeading('This run', 3)
+                .addLink('Open all four screenshots for this run', runUrl)
                 .addBreak()
-                .addLink(`Open full-size site ${site} image`, imageUrl)
+              for (let site = 1; site <= 4; site++) {
+                core.summary.addLink(`Site ${site} image`, `${runUrl}site-${site}.jpg`).addBreak()
+              }
             }
             await core.summary.write()
