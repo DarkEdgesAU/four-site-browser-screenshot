@@ -1,11 +1,12 @@
 import io
+import json
 from pathlib import Path
 import tempfile
 import unittest
 from datetime import datetime, timezone
 import zipfile
 
-from build_gallery import build_pages, images_from_zip, retained_captures
+from build_gallery import build_pages, capture_files_from_zip, retained_captures
 
 
 def capture(run, attempt, created, expired=False):
@@ -13,11 +14,13 @@ def capture(run, attempt, created, expired=False):
             "created_at": created, "expired": expired, "workflow_run": {"id": run}}
 
 
-def archive(value=b"\xff\xd8\xffcapture", names=None):
+def archive(value=b"\xff\xd8\xffcapture", names=None, extra=None):
     data = io.BytesIO()
     with zipfile.ZipFile(data, "w") as output:
         for name in names or [f"site-{site}.jpg" for site in range(1, 5)]:
             output.writestr(name, value)
+        for name, contents in (extra or {}).items():
+            output.writestr(name, contents)
     return data.getvalue()
 
 
@@ -57,7 +60,32 @@ class GalleryTests(unittest.TestCase):
         for data in [archive(names=["../site-1.jpg", "site-2.jpg", "site-3.jpg", "site-4.jpg"]),
                      archive(names=["site-1.jpg"]), archive(value=b"<html>not an image</html>")]:
             with self.assertRaises(ValueError):
-                images_from_zip(data)
+                capture_files_from_zip(data)
+
+    def test_json_is_fully_expanded_escaped_and_available_as_a_file(self):
+        payload = {"responseHeaders": {"test": '</code></pre><script>alert(1)</script>',
+                                       "set-cookie": "[REDACTED]"}, "long": "x" * 5000}
+        name = "site-1-request-response-headers.json"
+        data = archive(extra={name: json.dumps(payload)})
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "pages"
+            build_pages(output, [capture(22, 1, "2026-09-08T00:00:00Z")], lambda _: data, "org/repo")
+            directory = output / "runs/22/attempt-1"
+            page = (directory / "index.html").read_text(encoding="utf-8")
+            self.assertIn('<pre><code>', page)
+            self.assertNotIn('<details', page)
+            self.assertNotIn('<script>', page)
+            self.assertIn('&lt;script&gt;', page)
+            self.assertIn("x" * 5000, page)
+            self.assertIn('[REDACTED]', page)
+            self.assertEqual(json.loads((directory / name).read_text()), payload)
+
+    def test_invalid_json_and_unrecognized_files_are_rejected(self):
+        for extra in [{"site-1-network-address.json": "invalid"},
+                      {"site-1-network-address.json": "[]"},
+                      {"secret.json": "{}"}]:
+            with self.assertRaises(ValueError):
+                capture_files_from_zip(archive(extra=extra))
 
     def test_existing_output_cannot_silently_retain_expired_files(self):
         with tempfile.TemporaryDirectory() as temporary:

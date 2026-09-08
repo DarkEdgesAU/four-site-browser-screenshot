@@ -14,6 +14,12 @@ import zipfile
 
 CAPTURE_NAME = re.compile(r"gallery-capture-(\d+)-(\d+)\Z")
 IMAGE_NAMES = {f"site-{site}.jpg" for site in range(1, 5)}
+JSON_KINDS = {
+    "network-address": "Network details",
+    "request-response-headers": "Request and response headers",
+    "browser-diagnostics": "Browser diagnostics",
+}
+JSON_NAMES = {f"site-{site}-{kind}.json" for site in range(1, 5) for kind in JSON_KINDS}
 RETENTION_DAYS = 7
 
 
@@ -42,21 +48,49 @@ def retained_captures(artifacts, now):
     return sorted(selected.values(), key=lambda item: item["created_at"], reverse=True)
 
 
-def images_from_zip(data):
-    # Never extract archive paths: only four exact expected JPEG names are accepted.
+def capture_files_from_zip(data):
+    # Never extract archive paths: accept only exact JPEG/JSON names. Older
+    # screenshot-only capture bundles remain valid, without inventing their JSON.
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         members = archive.infolist()
-        if len(members) != 4 or {member.filename for member in members} != IMAGE_NAMES:
-            raise ValueError("A capture must contain exactly site-1.jpg through site-4.jpg")
-        images = {}
+        names = {member.filename for member in members}
+        if (len(names) != len(members) or not IMAGE_NAMES <= names
+                or not names <= IMAGE_NAMES | JSON_NAMES):
+            raise ValueError("A capture must contain four JPEGs and only recognized per-site JSON files")
+        files = {}
         for member in members:
-            if member.file_size > 20 * 1024 * 1024:
-                raise ValueError("Screenshot exceeds the 20 MiB per-image limit")
+            limit = 20 if member.filename in IMAGE_NAMES else 5
+            if member.file_size > limit * 1024 * 1024:
+                raise ValueError(f"Capture file exceeds its {limit} MiB limit")
             contents = archive.read(member)
-            if not contents.startswith(b"\xff\xd8\xff"):
+            if member.filename in IMAGE_NAMES and not contents.startswith(b"\xff\xd8\xff"):
                 raise ValueError("Capture contains a non-JPEG file")
-            images[member.filename] = contents
-        return images
+            if member.filename in JSON_NAMES:
+                parsed = json.loads(contents.decode("utf-8"))
+                if not isinstance(parsed, dict):
+                    raise ValueError("Per-site JSON must contain an object")
+                contents = (json.dumps(parsed, indent=2, ensure_ascii=False) + '\n').encode('utf-8')
+            files[member.filename] = contents
+        return files
+
+
+def site_section(site, files):
+    sections = [f'<section id="site-{site}"><h2>Site {site}</h2>',
+                f'<p><a href="site-{site}.jpg">Open full-size image</a></p>',
+                f'<a href="site-{site}.jpg"><img src="site-{site}.jpg" width="960" '
+                f'alt="Site {site} screenshot"></a>']
+    for kind, title in JSON_KINDS.items():
+        filename = f"site-{site}-{kind}.json"
+        sections.append(f'<h3>{title}</h3>')
+        if filename in files:
+            # JSON remains plain text, even if a URL or header contains HTML.
+            contents = html.escape(files[filename].decode('utf-8'))
+            sections.append(f'<p><a href="{filename}">Open JSON file</a></p>'
+                            f'<pre><code>{contents}</code></pre>')
+        else:
+            sections.append('<p>This capture did not include this JSON file.</p>')
+    sections.append('</section>')
+    return ''.join(sections)
 
 
 def document(title, body):
@@ -64,7 +98,7 @@ def document(title, body):
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(title)}</title>
-<style>body{{font:16px/1.5 system-ui,sans-serif;max-width:1080px;margin:32px auto;padding:0 20px;background:#f8fafc;color:#172033}}a{{color:#1745ab}}img{{max-width:100%;height:auto;border:1px solid #ccd5e2}}section{{background:white;padding:20px;margin:24px 0;border-radius:8px}}li{{margin:12px 0}}small{{color:#465166}}</style>
+<style>body{{font:16px/1.5 system-ui,sans-serif;max-width:1080px;margin:32px auto;padding:0 20px;background:#f8fafc;color:#172033}}a{{color:#1745ab}}img{{max-width:100%;height:auto;border:1px solid #ccd5e2}}section{{background:white;padding:20px;margin:24px 0;border-radius:8px}}li{{margin:12px 0}}small{{color:#465166}}pre{{white-space:pre-wrap;overflow-wrap:anywhere;background:#eef2f7;padding:16px;border-radius:6px;font-size:13px}}nav a{{margin-right:16px}}</style>
 </head><body>{body}</body></html>
 """
 
@@ -79,25 +113,22 @@ def build_pages(output, artifacts, download, repository):
     for artifact in artifacts:
         run_id, attempt = CAPTURE_NAME.fullmatch(artifact["name"]).groups()
         relative = f"runs/{run_id}/attempt-{attempt}"
-        images = images_from_zip(download(artifact))
+        files = capture_files_from_zip(download(artifact))
         directory = output / relative
         directory.mkdir(parents=True)
-        for filename, contents in images.items():
+        for filename, contents in files.items():
             (directory / filename).write_bytes(contents)
         title = f"Run {run_id} · attempt {attempt}"
         created = html.escape(artifact["created_at"])
         source = f"https://github.com/{repository}/actions/runs/{run_id}/attempts/{attempt}"
-        sections = "".join(
-            f'<section id="site-{site}"><h2>Site {site}</h2>'
-            f'<p><a href="site-{site}.jpg">Open full-size image</a></p>'
-            f'<a href="site-{site}.jpg"><img src="site-{site}.jpg" width="960" '
-            f'alt="Site {site} screenshot"></a></section>'
-            for site in range(1, 5)
-        )
+        sections = "".join(site_section(site, files) for site in range(1, 5))
         body = (f'<nav><a href="../../../">All retained runs</a></nav>'
                 f'<h1>{html.escape(title)}</h1><p>Captured {created} (UTC).</p>'
                 f'<p><a href="{html.escape(source, quote=True)}">Source Actions run</a></p>'
                 '<p>Retained for seven days. Images in this folder belong to this capture only.</p>'
+                '<p>JSON is shown in full with the capture’s existing redactions. '
+                'Browser diagnostic collection has per-event limits.</p>'
+                '<nav aria-label="Requests">' + ''.join(f'<a href="#site-{site}">Site {site}</a>' for site in range(1, 5)) + '</nav>'
                 + sections)
         (directory / "index.html").write_text(document(title, body), encoding="utf-8")
         links.append(f'<li><a href="{relative}/">{html.escape(title)}</a> — <small>{created}</small></li>')

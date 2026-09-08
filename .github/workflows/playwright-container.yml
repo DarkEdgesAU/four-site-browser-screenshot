@@ -162,7 +162,11 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: gallery-capture-${{ github.run_id }}-${{ github.run_attempt }}
-          path: test-results/site-screenshots/site-*.jpg
+          path: |
+            test-results/site-screenshots/site-*.jpg
+            test-results/site-screenshots/site-*-network-address.json
+            test-results/site-screenshots/site-*-request-response-headers.json
+            test-results/site-screenshots/site-*-browser-diagnostics.json
           if-no-files-found: error
           retention-days: 7
 
@@ -279,10 +283,10 @@ jobs:
               const runUrl = `${pagesBaseUrl}/runs/${process.env.GITHUB_RUN_ID}/attempt-${process.env.CAPTURE_ATTEMPT}/`
               core.summary
                 .addHeading('This run', 3)
-                .addLink('Open all four screenshots for this run', runUrl)
+                .addLink('Open screenshots and expanded JSON for this run', runUrl)
                 .addBreak()
               for (let site = 1; site <= 4; site++) {
-                core.summary.addLink(`Site ${site} image`, `${runUrl}site-${site}.jpg`).addBreak()
+                core.summary.addLink(`Site ${site}: screenshot and JSON`, `${runUrl}#site-${site}`).addBreak()
               }
             }
             await core.summary.write()
