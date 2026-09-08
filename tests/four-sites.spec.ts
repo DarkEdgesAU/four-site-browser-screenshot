@@ -1,6 +1,7 @@
 import { test, chromium, type Browser, type Page } from '@playwright/test';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { collectDiagnostics, safeMessage } from './browser-diagnostics';
 
 const defaultSites = [
   'https://signon.sso.cba/identity/.well-known/openid-configuration',
@@ -44,6 +45,7 @@ test('opens four browser windows and captures a screenshot for each site', async
 
   const browsers: Browser[] = [];
   const pages: Page[] = [];
+  const diagnostics: Awaited<ReturnType<typeof collectDiagnostics>>[] = [];
   const networkAddresses: Array<{
     site: string;
     httpStatus: number | null;
@@ -82,8 +84,13 @@ test('opens four browser windows and captures a screenshot for each site', async
       await cdp.send('Network.clearBrowserCookies').catch(() => undefined);
       browsers.push(browser);
       pages.push(page);
+      const diagnostic = await collectDiagnostics(page, headless);
+      diagnostics.push(diagnostic);
 
-      const response = await page.goto(site, { waitUntil: 'domcontentloaded' });
+      const response = await page.goto(site, { waitUntil: 'domcontentloaded' }).catch(error => {
+        diagnostic.mainNavigationError = safeMessage(String(error));
+        throw error;
+      });
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined);
       await page.waitForTimeout(1_000);
       const serverAddress = await response?.serverAddr();
@@ -151,6 +158,17 @@ test('opens four browser windows and captures a screenshot for each site', async
       );
     }
   } finally {
-    await Promise.all(browsers.map((browser) => browser.close()));
+    // Write before closing browsers so shutdown cancellations do not pollute the report.
+    try {
+      await Promise.all(diagnostics.map((diagnostic, index) => {
+        diagnostic.finishedAt = new Date().toISOString();
+        return fs.writeFile(
+          path.join(screenshotDirectory, `site-${index + 1}-browser-diagnostics.json`),
+          JSON.stringify(diagnostic, null, 2) + '\n', 'utf8',
+        );
+      }));
+    } finally {
+      await Promise.all(browsers.map((browser) => browser.close()));
+    }
   }
 });

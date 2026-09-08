@@ -166,6 +166,38 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload site 1 browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          path: test-results/site-screenshots/site-1-browser-diagnostics.json
+          archive: false
+          retention-days: 7
+
+      - name: Upload site 2 browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          path: test-results/site-screenshots/site-2-browser-diagnostics.json
+          archive: false
+          retention-days: 7
+
+      - name: Upload site 3 browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          path: test-results/site-screenshots/site-3-browser-diagnostics.json
+          archive: false
+          retention-days: 7
+
+      - name: Upload site 4 browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          path: test-results/site-screenshots/site-4-browser-diagnostics.json
+          archive: false
+          retention-days: 7
+
       - name: Add per-site headers to job summary
         if: always()
         shell: bash

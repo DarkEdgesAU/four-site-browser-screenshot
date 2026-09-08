@@ -51,4 +51,10 @@ The capture bundle uploads after a successful capture even if an individual arti
 
 The builder uses Python's standard library and the GitHub CLI available on the hosted runner. Its retention, per-attempt isolation, and ZIP validation checks can be run locally with `python -m unittest discover -s scripts -p 'test_*.py'`.
 
+## Browser diagnostics
+
+Each capture also uploads `site-<n>-browser-diagnostics.json` for seven days. These record response statuses and Cloudflare challenge markers, failed requests, console warnings/errors, page exceptions, and Chromium network blocking reasons. Collection starts before navigation and reports are written before browser shutdown, including on navigation failure. Events are bounded and `droppedEvents` indicates truncation. URL credentials, query values, long opaque path segments, and common credential patterns in messages are redacted; console message redaction is best-effort. No request/response bodies or console object arguments are collected. Diagnostic JSON is kept in Actions artifacts, not the public Pages gallery.
+
+A challenge response is not proof of a network block: inspect the challenge script/frame requests and their errors. Cloudflare's production challenges do not support automated Playwright clients. Expected challenge probe failures and Private Access Token 401 responses should not automatically be treated as the cause. The collector does not attempt to solve or bypass a challenge.
+
 For a visible run, use `npm run test:headed` after setting `SITE_URLS`. The test launches four separate Chromium processes so each site appears in its own browser window.
