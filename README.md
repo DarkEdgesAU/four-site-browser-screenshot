@@ -37,11 +37,14 @@ The container runs Chromium headlessly and writes screenshots plus `site-<n>-net
 
 ## GitHub Actions
 
-The `Four-site Playwright test` workflow is manually runnable with `workflow_dispatch` on the dedicated ARC scale set labeled `four-site-runner-set`. Add these repository secrets before running it:
+The `Four-site Playwright test` workflow is manually runnable with `workflow_dispatch` on the dedicated ARC scale set labeled `four-site-runner-set`. Docker Hub credentials are not required: the workflow pulls the public image `docker.io/darkedges/four-site-browser-screenshot:latest` and runs the checked-out test code on the ARC runner.
 
-- `DOCKERHUB_USERNAME`
-- `DOCKERHUB_TOKEN`
+Open the run's **Summary** page to see per-site network JSON, collapsible redacted request/response headers, and four individual image previews at 480 pixels wide. Step logs display source text; rendered content is on the Summary page. Each JSON code fence is explicitly separated from the file contents by a newline, including when the JSON file has no trailing newline.
 
-The workflow pulls the published public image `docker.io/darkedges/four-site-browser-screenshot:latest`, runs the test on the ARC runner, uploads each screenshot as an individual Actions artifact (`site-1-screenshot` through `site-4-screenshot`), uploads the network/header data separately, and adds the redacted headers to the job summary. Docker Hub credentials are not required for this workflow.
+The four JPEGs (`site-1.jpg` through `site-4.jpg`) and eight JSON files are separate downloadable artifacts retained for seven days. The Pages deployment bundle is retained for one day. GitHub Pages hosts only the latest four images and a gallery identifying their source run; each deployment replaces that content without committing images to Git history. The hosted site itself does not expire after one day.
+
+Inline previews are labelled **Latest published screenshots** because their URLs are reused. A run/attempt query parameter prevents reuse of the previous run's image-proxy cache entry, but does not preserve historical images. Use each run's own artifacts for historical evidence. Full-size image links and the latest gallery link are included in the summary.
+
+Pages preparation and upload run after a successful capture even if an individual artifact upload failed. The deployment job checks the Pages upload outcome rather than requiring every artifact upload to succeed; upload failures still leave the workflow failed. Runs are serialized to prevent concurrent Pages updates. A capture or Pages upload failure leaves the previous published gallery in place.
 
 For a visible run, use `npm run test:headed` after setting `SITE_URLS`. The test launches four separate Chromium processes so each site appears in its own browser window.
