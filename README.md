@@ -33,7 +33,7 @@ docker run --rm `
   darkedges/four-site-browser-screenshot:latest
 ```
 
-The container runs Chromium headlessly and writes screenshots plus `site-<n>-network-address.json` and `site-<n>-request-response-headers.json` files to `test-results/site-screenshots/`. Each site uses a new browser process and context with service workers, HTTP cache, cookies, and browser-level DNS cache disabled or cleared; requests also carry `Cache-Control: no-cache, no-store`. Request and response headers are uploaded with sensitive values redacted.
+The container runs Chromium headlessly and writes screenshots plus `site-<n>-network-address.json` and `site-<n>-request-response-headers.json` files to `test-results/site-screenshots/`. Each site uses a new browser process and context with service workers blocked, HTTP cache disabled through CDP, and browser cache/cookies cleared. Top-level navigations carry `Cache-Control: no-cache, no-store` and `Pragma: no-cache`; these headers are deliberately not injected into cross-origin subresources because they can trigger CORS preflights and prevent challenge scripts from loading. A new browser process avoids reusing its DNS cache, but does not flush Kubernetes or upstream DNS caches. Request and response headers are uploaded with sensitive values redacted.
 
 ## GitHub Actions
 

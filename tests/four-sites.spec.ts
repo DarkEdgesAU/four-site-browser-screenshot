@@ -2,6 +2,7 @@ import { test, chromium, type Browser, type Page } from '@playwright/test';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { collectDiagnostics, safeMessage } from './browser-diagnostics';
+import { configureFreshRequests } from './fresh-requests';
 
 const defaultSites = [
   'https://signon.sso.cba/identity/.well-known/openid-configuration',
@@ -74,16 +75,10 @@ test('opens four browser windows and captures a screenshot for each site', async
         ],
       });
       const context = await browser.newContext({ serviceWorkers: 'block' });
-      await context.setExtraHTTPHeaders({
-        'cache-control': 'no-cache, no-store',
-        pragma: 'no-cache',
-      });
       const page = await context.newPage({ viewport: { width: 1440, height: 900 } });
-      const cdp = await context.newCDPSession(page);
-      await cdp.send('Network.clearBrowserCache').catch(() => undefined);
-      await cdp.send('Network.clearBrowserCookies').catch(() => undefined);
       browsers.push(browser);
       pages.push(page);
+      await configureFreshRequests(page);
       const diagnostic = await collectDiagnostics(page, headless);
       diagnostics.push(diagnostic);
 
